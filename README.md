@@ -1,4 +1,4 @@
 # 2025_CSE391_NentangWeb
-
-Lê Văn Chương  
-Nguyễn Văn lâm Hùng
+## 1. Thành viên nhóm
+- 2351260653 - Nguyễn Văn lâm Hùng
+- 
