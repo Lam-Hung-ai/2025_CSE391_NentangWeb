@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Code demo useEffect Audio Player</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      color: #fff;
+      transition: background-image 1s ease-in-out;
+      overflow: hidden;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 50, 0.5);
+      z-index: -1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background-color: rgba(0, 0, 0, 0.6);
+      padding: 20px 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+      align-items: center;
+      max-width: 400px;
+    }
+
+    .clock {
+      font-size: 3rem;
+      font-weight: bold;
+      min-width: 160px;
+      text-align: center;
+      font-family: 'Courier New', Courier, monospace;
+      user-select: none;
+      letter-spacing: 3px;
+      color: #00ffff;
+      text-shadow:
+        0 0 5px #00ffff,
+        0 0 10px #00ffff,
+        0 0 20px #00ffff,
+        0 0 40px #00ffff;
+    }
+
+    .player {
+      width: 320px;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 15px;
+      box-shadow:
+        0 0 10px rgba(0, 255, 255, 0.7),
+        inset 0 0 10px rgba(0, 255, 255, 0.3);
+      text-align: center;
+      color: #e0f7fa;
+    }
+
+    .player h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      text-shadow: 0 0 8px #00bcd4;
+    }
+
+    .player p {
+      font-weight: bold;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+      text-shadow: 0 0 5px #00acc1;
+    }
+
+    button {
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 8px 4px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background-color: #00bcd4;
+      color: white;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 0 6px #00bcd4;
+    }
+
+    button:hover {
+      background-color: #008ba3;
+      box-shadow: 0 0 15px #008ba3;
+    }
+
+    .time {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #b2ebf2;
+      text-shadow: 0 0 5px #00acc1;
+    }
+
+    #leaves-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <div class="container" id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    //component đồng hồ
+    function Clock() {
+      // hooks useState để lưu trạng thái
+      const [time, setTime] = useState(new Date());
+
+      //hooks useeffect để tạo vòng lặp(setInterval) trạng thái time qua từng giây
+      useEffect(() => {
+        console.log("Đồng hồ được mount");
+        const timerId = setInterval(() => setTime(new Date()), 1000);
+
+        //Hàm clean-up trong useeffect để clear hàm setInterval
+        return () => {
+          clearInterval(timerId);
+          console.log("Đồng hồ bị unmount");
+        };
+      }, []);
+
+      //hàm định dạng time thành dạng HH:MM:SS
+      const formatTime = (date) => {
+        const h = String(date.getHours()).padStart(2, '0');
+        const m = String(date.getMinutes()).padStart(2, '0');
+        const s = String(date.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      };
+
+      //trả về 1 thẻ div chứa chuỗi thời gian
+      return <div className="clock">{formatTime(time)}</div>;
+    }
+    // 1 danh sách chứa các loại nhạc
+    const tracks = [
+      {
+        title: "Track 1 - Acoustic Breeze",
+        url: "https://www.bensound.com/bensound-music/bensound-acousticbreeze.mp3",
+      },
+      {
+        title: "Track 2 - Creative Minds",
+        url: "https://www.bensound.com/bensound-music/bensound-creativeminds.mp3",
+      },
+      {
+        title: "Track 3 - Energy",
+        url: "https://www.bensound.com/bensound-music/bensound-energy.mp3",
+      }
+    ];
+      // danh sách chứa các loại ảnh sẽ cập nhật làm hình nền khi đổi bài
+    const backgrounds = [
+      'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1470&q=80',
+      'https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&w=1470&q=80',
+      'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1470&q=80',
+    ];
+      //hàm xử lý hiệu ứng lá rơi 
+    function FallingLeaves() {
+
+      // hooks useRef
+      const canvasRef = useRef(null); //tạo một reference để truy cập DOM của thẻ <canvas> sau khi render.
+
+      const leaves = useRef([]);//dùng để lưu trữ mảng các chiếc lá rơi. useRef giữ nguyên giá trị giữa các lần render mà không gây re-render.
+    // Hooks useEffect để tạo và vẽ lá
+      useEffect(() => {
+        const canvas = canvasRef.current;//Lấy DOM element của <canvas> từ canvasRef.
+        const ctx = canvas.getContext('2d');
+        //Lấy chiều rộng và chiều cao của cửa sổ trình duyệt, rồi gán vào canvas để vẽ toàn màn hình.
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        const leafCount = 30;// tổng số lá
+        const leafEmojis = ['🍂', '🍁', '🍃'];
+          // hàm tạo chuyển lá , tốc độ rơi , góc rơi
+        const createLeaf = () => ({
+          x: Math.random() * width,
+          y: Math.random() * -height,
+          size: 15 + Math.random() * 20,
+          speedY: 1 + Math.random() * 2,
+          speedX: (Math.random() - 0.5) * 0.5,
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 2,
+          emoji: leafEmojis[Math.floor(Math.random() * leafEmojis.length)],
+        });
+
+        leaves.current = []; // tạo mảng lá mới
+        //khởi tạo 30 chiếc lá mới
+        for (let i = 0; i < leafCount; i++) {
+          leaves.current.push(createLeaf());
+        }
+
+        //Hàm draw để vẽ từng frame
+        let animationFrameId;
+        const draw = () => {
+          ctx.clearRect(0, 0, width, height);
+          ctx.font = "30px serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+
+          //vẽ từng chiếc lá
+          leaves.current.forEach((leaf) => {
+            ctx.save();
+            ctx.translate(leaf.x, leaf.y);
+            ctx.rotate((leaf.rotation * Math.PI) / 180);
+            ctx.font = `${leaf.size}px serif`;
+            ctx.fillText(leaf.emoji, 0, 0);
+            ctx.restore();
+            
+            //Cập nhật vị trí y (rơi xuống), x (trôi ngang), và xoay tiếp.
+            leaf.y += leaf.speedY;
+            leaf.x += leaf.speedX;
+            leaf.rotation += leaf.rotationSpeed;
+            //Điều kiện để khi lá rơi ra ngoài thì tự reset
+            if (leaf.y > height) {
+              leaf.x = Math.random() * width;
+              leaf.y = -20;
+              leaf.size = 15 + Math.random() * 20;
+              leaf.speedY = 1 + Math.random() * 2;
+              leaf.speedX = (Math.random() - 0.5) * 0.5;
+              leaf.rotation = Math.random() * 360;
+              leaf.rotationSpeed = (Math.random() - 0.5) * 2;
+              leaf.emoji = leafEmojis[Math.floor(Math.random() * leafEmojis.length)];
+            }
+            if (leaf.x > width) leaf.x = 0;
+            if (leaf.x < 0) leaf.x = width;
+          });
+         // Hàm draw() gọi chính nó lặp lại không ngừng → tạo hiệu ứng animation mượt.
+          animationFrameId = requestAnimationFrame(draw);
+        };
+
+        draw();
+        //Khi cửa sổ thay đổi kích thước thì canvas sẽ tự cập nhật kích thước để luôn vừa với màn hình.
+        const handleResize = () => {
+          width = window.innerWidth;
+          height = window.innerHeight;
+          canvas.width = width;
+          canvas.height = height;
+        };
+        //gán sự kiện thay đổi kích thước web
+        window.addEventListener("resize", handleResize);
+        //hàm clean-up khi component bị unmount
+        return () => {
+          cancelAnimationFrame(animationFrameId);
+          window.removeEventListener("resize", handleResize);
+        };
+      }, []);
+      //Trả về thẻ <canvas> để render animation lá rơi.
+      return <canvas id="leaves-canvas" ref={canvasRef}></canvas>;
+    }
+
+    function AudioPlayer({ currentTrackIndex, setCurrentTrackIndex, changeBackground }) {
+      // Lưu trạng thái đang phát hay tạm dừng.
+      const [isPlaying, setIsPlaying] = useState(false);
+      //Lưu số giây đã phát được của bài hát.
+      const [progress, setProgress] = useState(0);
+      //Trỏ tới thẻ <audio> để điều khiển play/pause, lấy currentTime
+      const audioRef = useRef(null);
+
+      useEffect(() => {
+        //Chạy khi isPlaying hoặc currentTrackIndex thay đổi.
+        if (!audioRef.current) return;
+        if (isPlaying) {
+          audioRef.current.play().catch((e) => {
+            console.log("Lỗi phát nhạc:", e);
+          });
+        } else {
+          audioRef.current.pause();
+        }
+        //mảng phụ thuộc nhờ isPlaying để điều khiển bật/dừng nhạc , currentTrackIndex khi thay đổi bài thì khi chạy lại sẽ bật đúng bài hiện tại
+      }, [isPlaying, currentTrackIndex]);
+
+      //cập nhật thời gian và xử lý khi bài hát kết thúc
+      useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const handleTimeUpdate = () => {
+          setProgress(audio.currentTime);
+        };
+
+        const handleEnded = () => {
+          setIsPlaying(false);
+          setProgress(0);
+          setCurrentTrackIndex((idx) => {
+            const nextIdx = (idx + 1) % tracks.length;
+            changeBackground();
+            return nextIdx;
+          });
+          setIsPlaying(true);
+        };
+
+        audio.addEventListener("timeupdate", handleTimeUpdate);
+        audio.addEventListener("ended", handleEnded);
+
+        return () => {
+          audio.removeEventListener("timeupdate", handleTimeUpdate);
+          audio.removeEventListener("ended", handleEnded);
+        };
+      }, [currentTrackIndex]);
+
+
+      
+
+      const togglePlay = () => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+          audioRef.current.pause();
+          setIsPlaying(false);
+        } else {
+          audioRef.current.play()
+            .then(() => setIsPlaying(true))
+            .catch((error) => console.log("Lỗi phát nhạc:", error));
+        }
+      };
+
+      const prevTrack = () => {
+        setCurrentTrackIndex((idx) => {
+          const prevIdx = idx === 0 ? tracks.length - 1 : idx - 1;
+          changeBackground();
+          return prevIdx;
+        });
+        setProgress(0);
+        setIsPlaying(true);
+      };
+
+      const nextTrack = () => {
+        setCurrentTrackIndex((idx) => {
+          const nextIdx = (idx + 1) % tracks.length;
+          changeBackground();
+          return nextIdx;
+        });
+        setProgress(0);
+        setIsPlaying(true);
+      };
+
+      const formatTime = (seconds) => {
+        if (isNaN(seconds)) return '0:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s < 10 ? "0" + s : s}`;
+      };
+
+      return (
+        <div className="player">
+          <h3>{tracks[currentTrackIndex].title}</h3>
+          <audio ref={audioRef} src={tracks[currentTrackIndex].url} preload="auto" />
+          <p>{formatTime(progress)}</p>
+          <div>
+            <button onClick={prevTrack}>⏮️</button>
+            <button onClick={togglePlay}>{isPlaying ? '⏸️' : '▶️'}</button>
+            <button onClick={nextTrack}>⏭️</button>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [background, setBackground] = useState(backgrounds[0]);
+      const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+      const [showClock, setShowClock] = useState(true);
+
+      useEffect(() => {
+        document.body.style.backgroundImage = `url(${background})`;
+      }, [background]);
+
+      const changeBackground = () => {
+        let newIndex;
+        do {
+          newIndex = Math.floor(Math.random() * backgrounds.length);
+        } while (backgrounds[newIndex] === background);
+        setBackground(backgrounds[newIndex]);
+      };
+
+      return (
+        <>
+          <FallingLeaves />
+          <div className="container">
+            {showClock && <Clock key="clock" />}
+            <AudioPlayer
+              currentTrackIndex={currentTrackIndex}
+              setCurrentTrackIndex={setCurrentTrackIndex}
+              changeBackground={changeBackground}
+            />
+            <button onClick={() => setShowClock((v) => !v)}>
+              {showClock ? 'Ẩn đồng hồ' : 'Hiện đồng hồ'}
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
